@@ -25,22 +25,22 @@ start syntax Source
 
 syntax SourceElement
   = stat:Statement
-  | FunctionDeclaration
+  | func:FunctionDeclaration
   ;
 
 syntax ZeroOrMoreSourceElements
-  = SourceElement NoNL ZeroOrMoreSourceElements
-  |
-  ;
+	= SourceElement NoNL ZeroOrMoreSourceElements
+	|
+	;
 
 syntax FunctionDeclaration 
-  = "function" Id "(" {Id ","}* ")" Block NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
+  = "function" Id name "(" {Id ","}* parameters ")" Block implementation NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
   ;
   
 // TODO add EOF
 
 lexical NoPrecedingEnters =
-  [\n] !<< [\ \t]*;
+	[\n] !<< [\ \t]*;
   
 syntax Statement 
   = block:Block NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
@@ -78,9 +78,9 @@ syntax Statement
 
   | whileDo: "while" "(" Expression ")" Statement //TODO: WHY DOESNT THE ERROR OCCUR HERE?
   | forDo: "for" "(" {VariableDeclarationNoIn ","}* ";" {Expression ","}* ";" {Expression ","}* ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
-  | forDo: "for" "(" "var" {VariableDeclarationNoIn ","}+ ";" {Expression ","}* ";" {Expression ","}* ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
+  | forDoDeclarations: "for" "(" "var" {VariableDeclarationNoIn ","}+ ";" {Expression ","}* ";" {Expression ","}* ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
   | forIn: "for" "(" Expression "in" Expression ")" Statement // left-hand side expr "in" ???
-  | forIn: "for" "(" "var" Id "in" Expression ")" Statement
+  | forInDeclaration: "for" "(" "var" Id "in" Expression ")" Statement
           
   | continueLabel: "continue" NoNL Id NoNL ";"
   | continueNoLabel: "continue" NoNL ";"
@@ -131,14 +131,14 @@ syntax BlockStatements
 syntax BlockStatement
   =  
     // statetements that do not end with a semicolon and one or more new lines
-     newLine: Statement!variableSemi!expressionSemi!returnExp!throwExp!returnNoExp!throwNoExp!continueLabel!continueNoLabel!breakLabel!breakNoLabel!empty!expressionLoose!emptyBlockEnd!continueLabelNoSemiBlockEnd!breakLabelNoSemiBlockEnd!continueNoLabelNoSemiBlockEnd!breakNoLabelNoSemiBlockEnd!returnExpNoSemiBlockEnd!returnNoExpNoSemiBlockEnd!throwExpNoSemiBlockEnd!throwNoExpNoSemiBlockEnd!expressionBlockEnd!block!ifThen!ifThenBlock!ifThenElse!ifThenElseBlock!doWhile!whileDo!forDo!forIn!tryBlock!switchCase!doWhile!doWhileLoose NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
+     newLine: Statement!variableSemi!expressionSemi!returnExp!throwExp!returnNoExp!throwNoExp!continueLabel!continueNoLabel!breakLabel!breakNoLabel!empty!expressionLoose!emptyBlockEnd!continueLabelNoSemiBlockEnd!breakLabelNoSemiBlockEnd!continueNoLabelNoSemiBlockEnd!breakNoLabelNoSemiBlockEnd!returnExpNoSemiBlockEnd!returnNoExpNoSemiBlockEnd!throwExpNoSemiBlockEnd!throwNoExpNoSemiBlockEnd!expressionBlockEnd!block!ifThen!ifThenBlock!ifThenElse!ifThenElseBlock!doWhile!whileDo!forDo!forIn!tryBlock!switchCase!doWhile!doWhileLoose stm NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
     // statements that end with a semicolon, not ending the block
     // Do not forget to create block ending versions of statements and exclude them here
-    | semiColon: Statement!variableNoSemi!expressionNoSemi!returnNoExpNoSemi!returnExpNoSemi!throwExpNoSemi!continueLabelNoSemi!continueNoLabelNoSemi!breakLabelNoSemi!breakNoLabelNoSemi!returnExpNoSemiBlockEnd!throwExpNoSemiBlockEnd!returnNoExpNoSemiBlockEnd!throwNoExpNoSemiBlockEnd!continueNoLabelNoSemiBlockEnd!breakNoLabelNoSemiBlockEnd!continueLabelNoSemiBlockEnd!breakLabelNoSemiBlockEnd!expressionLoose!expressionNL!emptyBlockEnd!expressionBlockEnd!block!ifThen!ifThenBlock!ifThenElse!ifThenElseBlock!whileDo!forDo!forIn!tryBlock!switchCase!doWhileLoose NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
+    | semiColon: Statement!variableNoSemi!expressionNoSemi!returnNoExpNoSemi!returnExpNoSemi!throwExpNoSemi!continueLabelNoSemi!continueNoLabelNoSemi!breakLabelNoSemi!breakNoLabelNoSemi!returnExpNoSemiBlockEnd!throwExpNoSemiBlockEnd!returnNoExpNoSemiBlockEnd!throwNoExpNoSemiBlockEnd!continueNoLabelNoSemiBlockEnd!breakNoLabelNoSemiBlockEnd!continueLabelNoSemiBlockEnd!breakLabelNoSemiBlockEnd!expressionLoose!expressionNL!emptyBlockEnd!expressionBlockEnd!block!ifThen!ifThenBlock!ifThenElse!ifThenElseBlock!whileDo!forDo!forIn!tryBlock!switchCase!doWhileLoose stm NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
     | nestedBlock: Block
     // Excludes everything except statements containing blocks which in turn contain statements. These don't have to end in newlines or semicolons.
-    | statementContainingNested: Statement!variableNoSemi!variableSemi!returnExp!returnExpNoSemi!returnExpNoSemiBlockEnd!returnNoExp!returnNoExpNoSemi!returnNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!empty!emptyBlockEnd!expressionSemi!expressionLoose!expressionBlockEnd!expressionNL!breakLabel!breakNoLabel!breakLabelNoSemi!breakLabelNoSemiBlockEnd!breakNoLabelNoSemi!breakNoLabelNoSemiBlockEnd!continueNoLabel!continueLabelNoSemi!continueLabelNoSemiBlockEnd!continueNoLabelNoSemi!continueNoLabelNoSemiBlockEnd!labeled!debugger!tryBlock!switchCase!block!ifThen!ifThenElse!doWhile!doWhileLoose NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
-    | functionDecl: FunctionDeclaration
+    | statementContainingNested: Statement!variableNoSemi!variableSemi!returnExp!returnExpNoSemi!returnExpNoSemiBlockEnd!returnNoExp!returnNoExpNoSemi!returnNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!empty!emptyBlockEnd!expressionSemi!expressionLoose!expressionBlockEnd!expressionNL!breakLabel!breakNoLabel!breakLabelNoSemi!breakLabelNoSemiBlockEnd!breakNoLabelNoSemi!breakNoLabelNoSemiBlockEnd!continueNoLabel!continueLabelNoSemi!continueLabelNoSemiBlockEnd!continueNoLabelNoSemi!continueNoLabelNoSemiBlockEnd!labeled!debugger!tryBlock!switchCase!block!ifThen!ifThenElse!doWhile!doWhileLoose stm NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
+    | functionDecl: FunctionDeclaration decl
     | switchBlock: SwitchBlock
     | tryBlock: TryBlock
     //TODO: find out why this only seems necessary for ifs and if-elses
@@ -146,7 +146,7 @@ syntax BlockStatement
   ;
 
 syntax LastBlockStatement
-  // statements that do not end with a semicolon and are not followed by new lines, but are followed by } (end of block)
+	// statements that do not end with a semicolon and are not followed by new lines, but are followed by } (end of block)
   = last: Statement!variableSemi!expressionSemi!returnNoExp!throwNoExp!continueLabel!continueNoLabel!breakLabel!breakNoLabel!empty!returnExp!throwExp!expressionNL!block!ifThen!ifThenElse!ifThenBlock!ifThenElseBlock!doWhile!whileDo!forDo!forIn!tryBlock!switchCase!doWhile NoNL () !>> [\n] >> [}]
   ;
   
@@ -156,12 +156,12 @@ syntax LastBlockStatement
 // parseAndView("appelkoek:{ break appelkoek;\n2;;;1\n+2;\n\n\n\n }"); each extra \n adds ambiguity
 
 lexical OneOrMoreNewLines =
-  [\n] NoNL () NoNL ZeroOrMoreNewLines NoNL () !>> [\n];
+	[\n] NoNL () NoNL ZeroOrMoreNewLines NoNL () !>> [\n];
 
 lexical ZeroOrMoreNewLines =
-  | [\n] NoNL ZeroOrMoreNewLines
-  |
-  ;
+	| [\n] NoNL ZeroOrMoreNewLines
+	|
+	;
 
 syntax ExpressionNoIn // inlining this doesn't work.
   = Expression!inn
@@ -176,13 +176,13 @@ syntax NoElse
   ;
 
 syntax VariableDeclaration 
-  = Id "=" Expression!comma
-  | Id
+  = filledDeclaration: Id id "=" Expression!comma expression
+  | emptyDeclaration: Id id
   ;
 
 syntax VariableDeclarationNoIn
-  = Id "=" Expression!inn
-  | Id
+  = filledDeclaration: Id id "=" Expression!inn expression
+  | emptyDeclaration: Id id
   ;
 
 syntax CaseBlock 
@@ -241,13 +241,14 @@ syntax Expression
   | emptyArray: "[" "]"
   | "{" {PropertyAssignment ","}+ "," "}"
   | objectDefinition:"{" {PropertyAssignment ","}* "}"
-  > function: "function" Id? "(" {Id ","}* ")" Block
+  > function: "function" Id id "(" {Id ","}* parameters ")" Block block // Is that so? cant we just have expressions as params...
+  | functionAnonymous: "function" "(" {Id ","}* parameters ")" Block block
   | property: Expression "." Id //Can be on LHS of variableAssignment
-  > Expression "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
-  | Expression "(" ")" //Can be on LHS of variableAssignment
+  > functionParams: Expression "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
+  | functionNoParams: Expression "(" ")" //Can be on LHS of variableAssignment
   | member: Expression "[" Expression "]" //Can be on LHS of variableAssignment
   | "this"
-  | Id //Can be on LHS of variableAssignment
+  | id: Id //Can be on LHS of variableAssignment
   | Literal
   > "new" Expression
   > Expression !>> [\n\r] "++"
@@ -297,12 +298,12 @@ syntax Expression
   > right Expression "&" !>> [&=] Expression
   > right Expression "^" !>> [=] Expression
   > right Expression "|" !>> [|=] Expression
-  > left Expression "&&" Expression
-  > left Expression "||" Expression
+  > left conjunction: Expression "&&" Expression
+  > left disjunction: Expression "||" Expression
   > right (
-  //| variableAssignmentMultiNoSemi:{variableAssignmentLoose ","}+ NoNL () $
-  //| variableAssignmentMultiBlockEnd:{variableAssignmentLoose ","}+ NoNL () >> [}]    
-        variableAssignment:Expression "=" !>> ([=][=]?) Expression!variableAssignmentLoose >> ";"
+	//| variableAssignmentMultiNoSemi:{variableAssignmentLoose ","}+ NoNL () $
+	//| variableAssignmentMultiBlockEnd:{variableAssignmentLoose ","}+ NoNL () >> [}]    
+	      variableAssignment:Expression "=" !>> ([=][=]?) Expression!variableAssignmentLoose >> ";"
     | variableAssignmentNoSemi:Expression "=" !>> ([=][=]?) Expression!variableAssignmentBlockEnd!variableAssignment >> [\n]
     | variableAssignmentBlockEnd:Expression "=" !>> ([=][=]?) Expression!variableAssignment NoNL () >> [}]
     | variableAssignmentLoose:Expression "=" !>> ([=][=]?) Expression!variableAssignment!variableAssignmentBlockEnd!variableAssignmentMulti !>> [\n] !>> "}" !>> ";"
@@ -322,7 +323,7 @@ syntax Expression
     | Expression "|=" Expression
   )
   > nestedExpression: "(" Expression ")" //Can be on LHS of variableAssignment
-  > right Expression "?" Expression ":" Expression
+  > right ternary: Expression "?" Expression ":" Expression
   // left comma: Expression "," Expression
   ;
 
@@ -341,7 +342,7 @@ syntax PropertyName
  ;
 
 syntax PropertyAssignment
-  = PropertyName ":" Expression
+  = property: PropertyName ":" Expression
   | "get" PropertyName "(" ")" Block
   | "set" PropertyName "(" Id ")" Block
   ;
@@ -609,27 +610,27 @@ keyword Reserved =
     "false"
   ;
 
-Source source(SourceElement head, LAYOUTLIST l, Source tail) {  
-  // Prioritizes add and subtract expressions in multiline returns over positive and negative numbers   
-  //TODO: left-most here too?
-  if (tail.args != [] 
-      && (isReturnWithExpression(head) || isThrowWithExpression(head) || isVariableDeclaration(head))
-      && unparse(tail) != ""
-      && isLeftMostPlusMinus(tail.args[0])
-      && findFirst(unparse(l), "\n") != -1) {
-      println("Filtering");
-    filter;
-  }
-  
-  if (tail.args != [] 
-    && (isExpression(head) || isExpressionNL(head))
-    && unparse(tail) != ""
-    && (isLeftMostPlusMinus(tail.args[0]) || isLeftMostParenthesesExpression(tail.args[0]))) {
-    println("Filtering");
-    filter; 
-  }
-  
-  fail;
+Source source(SourceElement head, LAYOUTLIST l, Source tail) {	
+	// Prioritizes add and subtract expressions in multiline returns over positive and negative numbers 	
+	//TODO: left-most here too?
+	if (tail.args != [] 
+			&& (isReturnWithExpression(head) || isThrowWithExpression(head) || isVariableDeclaration(head))
+			&& unparse(tail) != ""
+			&& isLeftMostPlusMinus(tail.args[0])
+			&& findFirst(unparse(l), "\n") != -1) {
+			println("Filtering");
+		filter;
+	}
+	
+	if (tail.args != [] 
+		&& (isExpression(head) || isExpressionNL(head))
+		&& unparse(tail) != ""
+		&& (isLeftMostPlusMinus(tail.args[0]) || isLeftMostParenthesesExpression(tail.args[0]))) {
+		println("Filtering");
+		filter; 
+	}
+	
+	fail;
 }
 
 //Validate statements starting with +
@@ -642,61 +643,61 @@ Source source(SourceElement head, LAYOUTLIST l, Source tail) {
 // }
 // TODO: make sure this doesn't filter. Currently it DOES.
 BlockStatements blockStatements(BlockStatement head, LAYOUTLIST l, BlockStatements tail) {
-  //println("I was called");
-  if (head is newLine && size(tail.args) > 0) {
-    // candidate for invalid parse tree
-    if (isLeftMostPlusMinus(tail.args[0])) {
-      //println("and filtered");
-      filter;
-    }
-  }
-  fail;
+	//println("I was called");
+	if (head is newLine && size(tail.args) > 0) {
+		// candidate for invalid parse tree
+		if (isLeftMostPlusMinus(tail.args[0])) {
+			//println("and filtered");
+			filter;
+		}
+	}
+	fail;
 }
 
 bool isLeftMostPlusMinus(Tree t) {
-  Tree lefty = getLeftMost(#Expression, t);
-  return (Expression)`+ <Expression _>` := lefty 
-    || (Expression)`- <Expression _>` := lefty;
+	Tree lefty = getLeftMost(#Expression, t);
+	return (Expression)`+ <Expression _>` := lefty 
+		|| (Expression)`- <Expression _>` := lefty;
 }
 
 bool isLeftMostParenthesesExpression(Tree t) {
-  Tree lefty = getLeftMost(#Expression, t);
-  return /(Expression)`( <Expression n1> )` := lefty;
+	Tree lefty = getLeftMost(#Expression, t);
+	return /(Expression)`( <Expression n1> )` := lefty;
 }
 
 tuple[int,int] getBeginPosition(Tree t) = (t@\loc).begin ? <-1,1>;
 
 Tree getLeftMost(type[&T] tp, Tree t) {
-  currentMin = t@\loc.end;
-  result = t;
-  visit (t) {
-    case &T child : {
-      pos1 = getBeginPosition(child);
-      if (pos1 != <-1,-1>, pos1 < currentMin) {
-        result = child;
-        currentMin = pos1;
-      }
-    }
-  }
-  return result;
+	currentMin = t@\loc.end;
+	result = t;
+	visit (t) {
+		case &T child : {
+			pos1 = getBeginPosition(child);
+			if (pos1 != <-1,-1>, pos1 < currentMin) {
+				result = child;
+				currentMin = pos1;
+			}
+		}
+	}
+	return result;
 }
 
 /*
 private bool containsInvalidBlockStatement(Tree t) {
-  if (/blockStatements(head, tail) := t) {
-    // still kinda wrong, isPlus/isMinus search too deep!
-    return tail.args != []
-      && unparse(tail) != ""
-      && (isPlusExpression(tail.args[0]) || isMinusExpression(tail.args[0]));
-  }
-  return false;
+	if (/blockStatements(head, tail) := t) {
+		// still kinda wrong, isPlus/isMinus search too deep!
+		return tail.args != []
+			&& unparse(tail) != ""
+			&& (isPlusExpression(tail.args[0]) || isMinusExpression(tail.args[0]));
+	}
+	return false;
 }
 
 public Tree amb(set[Tree] alternatives) {
-  result = { a | a <- alternatives, !containsInvalidBlockStatement(a)};
-  if ({Tree r} := result)
-    return r;
-  fail amb;
+	result = { a | a <- alternatives, !containsInvalidBlockStatement(a)};
+	if ({Tree r} := result)
+		return r;
+	fail amb;
 }
 */
 //Parsing
@@ -710,7 +711,7 @@ public void parseAndView(Tree tree) = render(space(visParsetree(tree),std(gap(8,
 private bool isReturnWithExpression(element) = /(Statement)`return <Expression e>` := element;
 private bool isThrowWithExpression(element) = /(Statement)`throw <Expression e>` := element;
 private bool isVariableDeclaration(element) = /(Statement)`var <VariableDeclaration v>` := element;
-  
+	
 private bool isExpression(element) = /(Statement)`<Expression e>` := element;
 private bool isExpressionSemi(element) = /(Statement)`<Expression e>;` := element;
 private bool isExpressionNL(element) = /(Statement)`<Expression e> <OneOrMoreNewLines n>` := element;
