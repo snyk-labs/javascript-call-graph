@@ -41,22 +41,22 @@ syntax FunctionDeclaration
 
 lexical NoPrecedingEnters =
 	[\n] !<< [\ \t]*;
-  
+
 syntax Statement 
   = block:Block NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
-  | variableNoSemi: "var" {VariableDeclaration ","}+ NoNL () $
-  | variableSemi: "var" {VariableDeclaration ","}+ NoNL ";"
+  | variableNoSemi: "var" {VariableDeclaration ","}+ declarations NoNL () $
+  | variableSemi: "var" {VariableDeclaration ","}+ declarations NoNL ";"
 
-  | returnExp: "return" NoNL Expression NoNL ";"
-  | returnExpNoSemi: "return" NoNL Expression NoNL () $
-  | returnExpNoSemiBlockEnd: "return" NoNL Expression NoNL () >> [}]
+  | returnExp: "return" NoNL Expression expression NoNL ";"
+  | returnExpNoSemi: "return" NoNL Expression expression NoNL () $
+  | returnExpNoSemiBlockEnd: "return" NoNL Expression expression NoNL () >> [}]
   | returnNoExp: "return" NoNL ";"
   | returnNoExpNoSemi: "return" NoNL () $
   | returnNoExpNoSemiBlockEnd: "return" NoNL () >> [}]  
 
-  | throwExp: "throw" NoNL Expression NoNL ";"
-  | throwExpNoSemi: "throw" NoNL Expression NoNL () $
-  | throwExpNoSemiBlockEnd: "throw" NoNL Expression NoNL () >> [}]
+  | throwExp: "throw" NoNL Expression expression NoNL ";"
+  | throwExpNoSemi: "throw" NoNL Expression expression NoNL () $
+  | throwExpNoSemiBlockEnd: "throw" NoNL Expression expression NoNL () >> [}]
   | throwNoExp: "throw" NoNL ";"
   | throwNoExpNoSemi: "throw" NoNL () $
   | throwNoExpNoSemiBlockEnd: "throw" NoNL () >> [}]
@@ -68,19 +68,19 @@ syntax Statement
   | expressionBlockEnd: Expression!function!objectDefinition NoNL () !>> [\n] >> [}] >> ZeroOrMoreNewLines
   | expressionNL: Expression!function!objectDefinition NoNL OneOrMoreNewLines !>> [\n]
 
-  | ifThen: "if" "(" Expression ")" Statement!block !>> "else"
-  | ifThenBlock: "if" "(" Expression ")" Block !>> "else"
-  | ifThenElse: "if" "(" Expression ")" Statement "else" Statement!block //For if-then-else only the second block is revelant as it is the one adjacent to next statements.
-  | ifThenElseBlock: "if" "(" Expression ")" Statement "else" Block
+  | ifThen: "if" "(" Expression condition ")" Statement!block !>> "else"
+  | ifThenBlock: "if" "(" Expression condition ")" Block !>> "else"
+  | ifThenElse: "if" "(" Expression condition ")" Statement "else" Statement!block //For if-then-else only the second block is revelant as it is the one adjacent to next statements.
+  | ifThenElseBlock: "if" "(" Expression condition ")" Statement "else" Block
 
-  | doWhile: "do" Statement "while" "(" Expression ")" ";"
-  | doWhileLoose: "do" Statement "while" "(" Expression ")" !>> ";"
+  | doWhile: "do" Statement "while" "(" Expression condition ")" ";"
+  | doWhileLoose: "do" Statement "while" "(" Expression condition ")" !>> ";"
 
-  | whileDo: "while" "(" Expression ")" Statement //TODO: WHY DOESNT THE ERROR OCCUR HERE?
-  | forDo: "for" "(" {VariableDeclarationNoIn ","}* ";" {Expression ","}* ";" {Expression ","}* ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
-  | forDoDeclarations: "for" "(" "var" {VariableDeclarationNoIn ","}+ ";" {Expression ","}* ";" {Expression ","}* ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
-  | forIn: "for" "(" Expression "in" Expression ")" Statement // left-hand side expr "in" ???
-  | forInDeclaration: "for" "(" "var" Id "in" Expression ")" Statement
+  | whileDo: "while" "(" Expression condition ")" Statement //TODO: WHY DOESNT THE ERROR OCCUR HERE?
+  | forDo: "for" "(" {VariableDeclarationNoIn ","}* ";" {Expression ","}* conditions ";" {Expression ","}* loopOperations ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
+  | forDoDeclarations: "for" "(" "var" {VariableDeclarationNoIn ","}+ ";" {Expression ","}* conditions ";" {Expression ","}* loopOperations ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
+  | forIn: "for" "(" Expression expressionLeft "in" Expression expressionRight ")" Statement // left-hand side expr "in" ???
+  | forInDeclaration: "for" "(" "var" Id "in" Expression expressionRight ")" Statement
           
   | continueLabel: "continue" NoNL Id NoNL ";"
   | continueNoLabel: "continue" NoNL ";"
@@ -96,14 +96,14 @@ syntax Statement
   | breakNoLabelNoSemi: "break" NoNL () $
   | breakNoLabelNoSemiBlockEnd: "break" NoNL () >> [}]
   
-  | withDo: "with" "(" Expression ")" Statement
+  | withDo: "with" "(" Expression expression ")" Statement
   | switchCase: SwitchBlock //TODO: MAYBE EAT NEWLINES HERE TOO?
   | labeled: Spaces Id NoNL ":" Statement
   | tryBlock: TryBlock
   | debugger: "debugger" ";"?
   ;
 
-syntax SwitchBlock = "switch" "(" Expression ")" CaseBlock;
+syntax SwitchBlock = switchBlock: "switch" "(" Expression expression ")" CaseBlock block;
 
 
 syntax TryBlock =
@@ -117,7 +117,7 @@ syntax TryBlock =
 //For this reason the ZeroOrMoreNewlines stuff was moved to higher levels.
 syntax Block
   = emptyBlock: "{" "}"
-  | block: "{" BlockStatements "}"
+  | filledBlock: "{" BlockStatements statements "}"
   ;
   
 //TODO: find out if not-follows restriction can be removed.
@@ -128,6 +128,8 @@ syntax BlockStatements
   | tailEnd: BlockStatement >> ()
   ;
 
+
+
 syntax BlockStatement
   =  
     // statetements that do not end with a semicolon and one or more new lines
@@ -135,12 +137,12 @@ syntax BlockStatement
     // statements that end with a semicolon, not ending the block
     // Do not forget to create block ending versions of statements and exclude them here
     | semiColon: Statement!variableNoSemi!expressionNoSemi!returnNoExpNoSemi!returnExpNoSemi!throwExpNoSemi!continueLabelNoSemi!continueNoLabelNoSemi!breakLabelNoSemi!breakNoLabelNoSemi!returnExpNoSemiBlockEnd!throwExpNoSemiBlockEnd!returnNoExpNoSemiBlockEnd!throwNoExpNoSemiBlockEnd!continueNoLabelNoSemiBlockEnd!breakNoLabelNoSemiBlockEnd!continueLabelNoSemiBlockEnd!breakLabelNoSemiBlockEnd!expressionLoose!expressionNL!emptyBlockEnd!expressionBlockEnd!block!ifThen!ifThenBlock!ifThenElse!ifThenElseBlock!whileDo!forDo!forIn!tryBlock!switchCase!doWhileLoose stm NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
-    | nestedBlock: Block
+    | nestedBlock: Statement!variableNoSemi!variableSemi!returnExp!returnExpNoSemi!returnExpNoSemiBlockEnd!returnNoExp!returnNoExpNoSemi!returnNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!empty!emptyBlockEnd!expressionSemi!expressionLoose!expressionBlockEnd!expressionNL!ifThen!ifThenBlock!ifThenElse!ifThenElseBlock!doWhile!doWhileLoose!whileDo!forDo!forDoDeclarations!forIn!forInDeclaration!continueLabel!continueNoLabel!continueLabelNoSemi!continueLabelNoSemiBlockEnd!continueNoLabelNoSemi!continueNoLabelNoSemiBlockEnd!breakLabel!breakNoLabel!breakLabelNoSemi!breakLabelNoSemiBlockEnd!breakNoLabelNoSemi!breakNoLabelNoSemiBlockEnd!withDo!switchCase!labeled!tryBlock!debugger
     // Excludes everything except statements containing blocks which in turn contain statements. These don't have to end in newlines or semicolons.
     | statementContainingNested: Statement!variableNoSemi!variableSemi!returnExp!returnExpNoSemi!returnExpNoSemiBlockEnd!returnNoExp!returnNoExpNoSemi!returnNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!empty!emptyBlockEnd!expressionSemi!expressionLoose!expressionBlockEnd!expressionNL!breakLabel!breakNoLabel!breakLabelNoSemi!breakLabelNoSemiBlockEnd!breakNoLabelNoSemi!breakNoLabelNoSemiBlockEnd!continueNoLabel!continueLabelNoSemi!continueLabelNoSemiBlockEnd!continueNoLabelNoSemi!continueNoLabelNoSemiBlockEnd!labeled!debugger!tryBlock!switchCase!block!ifThen!ifThenElse!doWhile!doWhileLoose stm NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
     | functionDecl: FunctionDeclaration decl
-    | switchBlock: SwitchBlock
-    | tryBlock: TryBlock
+    | switchBlock: Statement!block!variableNoSemi!variableSemi!returnExp!returnExpNoSemi!returnExpNoSemiBlockEnd!returnNoExp!returnNoExpNoSemi!returnNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!empty!emptyBlockEnd!expressionSemi!expressionLoose!expressionBlockEnd!expressionNL!ifThen!ifThenBlock!ifThenElse!ifThenElseBlock!doWhile!doWhileLoose!whileDo!forDo!forDoDeclarations!forIn!forInDeclaration!continueLabel!continueNoLabel!continueLabelNoSemi!continueLabelNoSemiBlockEnd!continueNoLabelNoSemi!continueNoLabelNoSemiBlockEnd!breakLabel!breakNoLabel!breakLabelNoSemi!breakLabelNoSemiBlockEnd!breakNoLabelNoSemi!breakNoLabelNoSemiBlockEnd!withDo!labeled!debugger!tryBlock 
+    | tryBlock: Statement!block!variableNoSemi!variableSemi!returnExp!returnExpNoSemi!returnExpNoSemiBlockEnd!returnNoExp!returnNoExpNoSemi!returnNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!empty!emptyBlockEnd!expressionSemi!expressionLoose!expressionBlockEnd!expressionNL!ifThen!ifThenBlock!ifThenElse!ifThenElseBlock!doWhile!doWhileLoose!whileDo!forDo!forDoDeclarations!forIn!forInDeclaration!continueLabel!continueNoLabel!continueLabelNoSemi!continueLabelNoSemiBlockEnd!continueNoLabelNoSemi!continueNoLabelNoSemiBlockEnd!breakLabel!breakNoLabel!breakLabelNoSemi!breakLabelNoSemiBlockEnd!breakNoLabelNoSemi!breakNoLabelNoSemiBlockEnd!withDo!switchCase!labeled!debugger
     //TODO: find out why this only seems necessary for ifs and if-elses
     | singleStatementConditionals: Statement!block!variableNoSemi!variableSemi!returnExp!returnExpNoSemi!returnExpNoSemiBlockEnd!returnNoExp!returnNoExpNoSemi!returnNoExpNoSemiBlockEnd!throwExp!throwExpNoSemi!throwExpNoSemiBlockEnd!throwNoExp!throwNoExpNoSemi!throwNoExpNoSemiBlockEnd!empty!emptyBlockEnd!expressionSemi!expressionLoose!expressionBlockEnd!expressionNL!continueLabel!continueNoLabel!continueLabelNoSemi!continueLabelNoSemiBlockEnd!continueNoLabelNoSemi!continueNoLabelNoSemiBlockEnd!breakLabel!breakNoLabel!breakLabelNoSemi!breakNoLabelNoSemiBlockEnd!continueLabelNoSemiBlockEnd!continueNoLabelNoSemi!continueNoLabelNoSemiBlockEnd!withDo!switchCase!labeled!tryBlock!debugger!ifThenBlock!ifThenElseBlock!doWhile!whileDo!forDo!forIn!doWhile!breakNoLabelNoSemi NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
   ;
@@ -180,13 +182,17 @@ syntax VariableDeclaration
   | emptyDeclaration: Id id
   ;
 
+syntax VariableAssignment
+  = filledAssignment: Expression lhs "=" Expression!comma rhs
+  ;
+
 syntax VariableDeclarationNoIn
   = filledDeclaration: Id id "=" Expression!inn expression
   | emptyDeclaration: Id id
   ;
 
 syntax CaseBlock 
-  = "{" CaseOrDefaultClause+ "}"
+  = cases: "{" CaseOrDefaultClause+ clauses "}"
   | "{" "}"
   ;
 
@@ -197,25 +203,25 @@ syntax CaseClauses =
  //| caseclause: CaseOrDefaultClause >> [}]
 ;
 
-syntax CaseOrDefaultClause = CaseClause
-| DefaultClause
+syntax CaseOrDefaultClause = caseclause: CaseClause
+| defaultclause: DefaultClause
 ;
 
+// TODO cases do not allow for function declarations at the moment, but they should
 syntax CaseClause 
 =  //=  "case" Expression ":" Statement!breakNoLabelNoSemi* breakNoLabelNoSemi
   //| "case" Expression ":" Statement!breakNoLabelNoSemiBlockEnd* breakNoLabelNoSemiBlockEnd // only possible at block end
   //| "case" Expression ":" Statement!breakNoLabel* breakNoLabel
   // "case" Expression ":" CaseClause // fallthrough
  // | "case" Expression ":" DefaultClause // fallthrough
-   "case" Expression ":" Statement+
+   filledCase: "case" Expression ":" Statement+
    | emptyfallthrough: "case" Expression ":" !>> Statement 
   
   ;
 
-
 syntax DefaultClause 
-  = "default" ":" Statement+
-  | empty: "default" ":" !>> Statement
+  = filledDefault: "default" ":" Statement+
+  | emptyDefault: "default" ":" !>> Statement
   ;
 
 
@@ -239,10 +245,10 @@ syntax Expression
   = 
    array: "[" {Expression!comma ","}+ "]"
   | emptyArray: "[" "]"
-  | "{" {PropertyAssignment ","}+ "," "}"
+  | objectDefinitionCommaSuffix:"{" {PropertyAssignment ","}+ "," "}"
   | objectDefinition:"{" {PropertyAssignment ","}* "}"
   > function: "function" Id id "(" {Id ","}* parameters ")" Block block // Is that so? cant we just have expressions as params...
-  | functionAnonymous: "function" "(" {Id ","}* parameters ")" Block block
+  | functionAnonymous: "function" "(" {Id ","}* parameters ")" Block block // must be preceded by a var decl or so (cant be loose) // TODO fix!
   | property: Expression "." Id //Can be on LHS of variableAssignment
   > functionParams: Expression "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
   | functionNoParams: Expression "(" ")" //Can be on LHS of variableAssignment
@@ -301,15 +307,13 @@ syntax Expression
   > left conjunction: Expression "&&" Expression
   > left disjunction: Expression "||" Expression
   > right (
-	//| variableAssignmentMultiNoSemi:{variableAssignmentLoose ","}+ NoNL () $
-	//| variableAssignmentMultiBlockEnd:{variableAssignmentLoose ","}+ NoNL () >> [}]    
-	      variableAssignment:Expression "=" !>> ([=][=]?) Expression!variableAssignmentLoose >> ";"
+	variableAssignment:Expression "=" !>> ([=][=]?) Expression!variableAssignmentLoose >> ";"
     | variableAssignmentNoSemi:Expression "=" !>> ([=][=]?) Expression!variableAssignmentBlockEnd!variableAssignment >> [\n]
     | variableAssignmentBlockEnd:Expression "=" !>> ([=][=]?) Expression!variableAssignment NoNL () >> [}]
     | variableAssignmentLoose:Expression "=" !>> ([=][=]?) Expression!variableAssignment!variableAssignmentBlockEnd!variableAssignmentMulti !>> [\n] !>> "}" !>> ";"
     
     // TODO this might parse invalid javascript, if a declaration ends with ,
-    | variableAssignmentMulti:Expression "=" !>> ([=][=]?) Expression!variableAssignment!variableAssignmentBlockEnd ","
+    | variableAssignmentMulti:{VariableAssignment ","}+ assignments
     | Expression "*=" Expression
     | Expression "/=" Expression
     | Expression "%=" Expression
@@ -326,14 +330,6 @@ syntax Expression
   > right ternary: Expression "?" Expression ":" Expression
   // left comma: Expression "," Expression
   ;
-
-syntax AssignmentExpression =
-  assignment: SubAssignment head "," AssignmentExpression tail
- | SubAssignment >> ()
- |
- ;
- 
-syntax SubAssignment = Expression "=" !>> "=" Expression;
 
 syntax PropertyName
  = Id
