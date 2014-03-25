@@ -313,7 +313,7 @@ syntax Expression
     | variableAssignmentLoose:Expression "=" !>> ([=][=]?) Expression!variableAssignment!variableAssignmentBlockEnd!variableAssignmentMulti !>> [\n] !>> "}" !>> ";"
     
     // TODO this might parse invalid javascript, if a declaration ends with ,
-    | variableAssignmentMulti:{VariableAssignment ","}+ assignments
+    | variableAssignmentMulti:VariableAssignment "," {VariableAssignment ","}+ assignments
     | Expression "*=" Expression
     | Expression "/=" Expression
     | Expression "%=" Expression
