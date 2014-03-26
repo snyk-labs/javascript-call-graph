@@ -253,7 +253,7 @@ syntax Expression
   > functionParams: Expression "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
   | functionNoParams: Expression "(" ")" //Can be on LHS of variableAssignment
   | member: Expression "[" Expression "]" //Can be on LHS of variableAssignment
-  | "this"
+  | this: "this"
   | id: Id //Can be on LHS of variableAssignment
   | Literal
   > "new" Expression
