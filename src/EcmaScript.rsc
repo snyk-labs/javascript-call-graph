@@ -253,7 +253,7 @@ syntax Expression
   > functionParams: Expression "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
   | functionNoParams: Expression "(" ")" //Can be on LHS of variableAssignment
   | member: Expression "[" Expression "]" //Can be on LHS of variableAssignment
-  | "this"
+  | this: "this"
   | id: Id //Can be on LHS of variableAssignment
   | Literal
   > "new" Expression
@@ -313,7 +313,7 @@ syntax Expression
     | variableAssignmentLoose:Expression "=" !>> ([=][=]?) Expression!variableAssignment!variableAssignmentBlockEnd!variableAssignmentMulti !>> [\n] !>> "}" !>> ";"
     
     // TODO this might parse invalid javascript, if a declaration ends with ,
-    | variableAssignmentMulti:{VariableAssignment ","}+ assignments
+    | variableAssignmentMulti:VariableAssignment "," {VariableAssignment ","}+ assignments
     | Expression "*=" Expression
     | Expression "/=" Expression
     | Expression "%=" Expression
