@@ -29,9 +29,9 @@ syntax SourceElement
   ;
 
 syntax ZeroOrMoreSourceElements
-  = SourceElement NoNL ZeroOrMoreSourceElements
-  |
-  ;
+	= SourceElement NoNL ZeroOrMoreSourceElements
+	|
+	;
 
 syntax FunctionDeclaration 
   = "function" Id name "(" {Id ","}* parameters ")" Block implementation NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
@@ -40,7 +40,7 @@ syntax FunctionDeclaration
 // TODO add EOF
 
 lexical NoPrecedingEnters =
-  [\n] !<< [\ \t]*;
+	[\n] !<< [\ \t]*;
 
 syntax Statement 
   = block:Block NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
@@ -63,10 +63,10 @@ syntax Statement
     
   | empty: ";" NoNL () !>> [}]
   | emptyBlockEnd: ";" NoNL () !>> [\n] >> [}]
-  | expressionSemi: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams!functionExpression!objectDefinition NoNL ";"
-  | expressionLoose: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams!functionExpression!objectDefinition NoNL () !>> [\n] NoNL () $
-  | expressionBlockEnd: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams!functionExpression!objectDefinition NoNL () !>> [\n] >> [}] >> ZeroOrMoreNewLines
-  | expressionNL: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams!functionExpression!objectDefinition NoNL OneOrMoreNewLines !>> [\n]
+  | expressionSemi: Expression!function!functionAnonymous!objectDefinition NoNL ";"
+  | expressionLoose: Expression!function!functionAnonymous!objectDefinition NoNL () !>> [\n] NoNL () $
+  | expressionBlockEnd: Expression!function!functionAnonymous!objectDefinition NoNL () !>> [\n] >> [}] >> ZeroOrMoreNewLines
+  | expressionNL: Expression!function!functionAnonymous!objectDefinition NoNL OneOrMoreNewLines !>> [\n]
 
   | ifThen: "if" "(" Expression condition ")" Statement!block !>> "else"
   | ifThenBlock: "if" "(" Expression condition ")" Block !>> "else"
@@ -147,7 +147,7 @@ syntax BlockStatement
   ;
 
 syntax LastBlockStatement
-  // statements that do not end with a semicolon and are not followed by new lines, but are followed by } (end of block)
+	// statements that do not end with a semicolon and are not followed by new lines, but are followed by } (end of block)
   = last: Statement!variableSemi!expressionSemi!returnNoExp!throwNoExp!continueLabel!continueNoLabel!breakLabel!breakNoLabel!empty!returnExp!throwExp!expressionNL!block!ifThen!ifThenElse!ifThenBlock!ifThenElseBlock!doWhile!whileDo!tryBlock!switchCase!doWhile!forDo!forDoDeclarations!forIn!forInDeclaration NoNL () !>> [\n] >> [}]
   ;
   
@@ -157,12 +157,12 @@ syntax LastBlockStatement
 // parseAndView("appelkoek:{ break appelkoek;\n2;;;1\n+2;\n\n\n\n }"); each extra \n adds ambiguity
 
 lexical OneOrMoreNewLines =
-  [\n] NoNL () NoNL ZeroOrMoreNewLines NoNL () !>> [\n];
+	[\n] NoNL () NoNL ZeroOrMoreNewLines NoNL () !>> [\n];
 
 lexical ZeroOrMoreNewLines =
-  | [\n] NoNL ZeroOrMoreNewLines
-  |
-  ;
+	| [\n] NoNL ZeroOrMoreNewLines
+	|
+	;
 
 syntax ExpressionNoIn // inlining this doesn't work.
   = Expression!inn
@@ -246,12 +246,11 @@ syntax Expression
   | emptyArray: "[" "]"
   | objectDefinitionCommaSuffix:"{" {PropertyAssignment ","}+ "," "}"
   | objectDefinition:"{" {PropertyAssignment ","}* "}"
-  | funcExpr: FunctionExpression
+  > function: "function" Id id "(" {Id ","}* parameters ")" Block block // Is that so? cant we just have expressions as params...
+  | functionAnonymous: "function" "(" {Id ","}* parameters ")" Block block // must be preceded by a var decl or so (cant be loose) // TODO fix!
   | property: Expression "." Id //Can be on LHS of variableAssignment
-  | functionCallParams: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
-  | functionCallNoParams: () Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams "(" ")" //Can be on LHS of variableAssignment
-  | functionExpressionCallParams: () () FunctionExpression "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
-  | functionExpressionCallNoParams: () () () FunctionExpression "(" ")" //Can be on LHS of variableAssignment
+  > functionParams: Expression "(" { Expression!comma ","}+ call ")" //Can be on LHS of variableAssignment
+  | functionNoParams: Expression "(" oneShotOpen ")" oneShotClose //Can be on LHS of variableAssignment
   | member: Expression "[" Expression "]" //Can be on LHS of variableAssignment
   | this: "this"
   | id: Id //Can be on LHS of variableAssignment
@@ -307,7 +306,7 @@ syntax Expression
   > left conjunction: Expression "&&" Expression
   > left disjunction: Expression "||" Expression
   > right (
-  variableAssignment:Expression "=" !>> ([=][=]?) Expression!variableAssignmentLoose >> ";"
+	variableAssignment:Expression "=" !>> ([=][=]?) Expression!variableAssignmentLoose >> ";"
     | variableAssignmentNoSemi:Expression "=" !>> ([=][=]?) Expression!variableAssignmentBlockEnd!variableAssignment >> [\n]
     | variableAssignmentBlockEnd:Expression "=" !>> ([=][=]?) Expression!variableAssignment NoNL () >> [}]
     | variableAssignmentLoose:Expression "=" !>> ([=][=]?) Expression!variableAssignment!variableAssignmentBlockEnd!variableAssignmentMulti !>> [\n] !>> "}" !>> ";"
@@ -330,12 +329,7 @@ syntax Expression
   > right ternary: Expression "?" Expression ":" Expression
   // left comma: Expression "," Expression
   ;
-  
-syntax FunctionExpression
- = function: "function" Id id "(" {Id ","}* parameters ")" Block block // Is that so? cant we just have expressions as params...
- | functionAnonymous: "function" "(" {Id ","}* parameters ")" Block block // must be preceded by a var decl or so (cant be loose) // TODO fix!
- ;
- 
+
 syntax PropertyName
  = Id
  | String
@@ -588,7 +582,6 @@ keyword Reserved =
     "extends" |
     "final" |
     "float" |
-    "goto" |
     "implements" |
     "import" |
     "interface" |
@@ -611,27 +604,27 @@ keyword Reserved =
     "false"
   ;
 
-Source source(SourceElement head, LAYOUTLIST l, Source tail) {  
-  // Prioritizes add and subtract expressions in multiline returns over positive and negative numbers   
-  //TODO: left-most here too?
-  if (tail.args != [] 
-      && (isReturnWithExpression(head) || isThrowWithExpression(head) || isVariableDeclaration(head))
-      && unparse(tail) != ""
-      && isLeftMostPlusMinus(tail.args[0])
-      && findFirst(unparse(l), "\n") != -1) {
-      println("Filtering");
-    filter;
-  }
-  
-  if (tail.args != [] 
-    && (isExpression(head) || isExpressionNL(head))
-    && unparse(tail) != ""
-    && (isLeftMostPlusMinus(tail.args[0]) || isLeftMostParenthesesExpression(tail.args[0]))) {
-    println("Filtering");
-    filter; 
-  }
-  
-  fail;
+Source source(SourceElement head, LAYOUTLIST l, Source tail) {	
+	// Prioritizes add and subtract expressions in multiline returns over positive and negative numbers 	
+	//TODO: left-most here too?
+	if (tail.args != [] 
+			&& (isReturnWithExpression(head) || isThrowWithExpression(head) || isVariableDeclaration(head))
+			&& unparse(tail) != ""
+			&& isLeftMostPlusMinus(tail.args[0])
+			&& findFirst(unparse(l), "\n") != -1) {
+			println("Filtering");
+		filter;
+	}
+	
+	if (tail.args != [] 
+		&& (isExpression(head) || isExpressionNL(head))
+		&& unparse(tail) != ""
+		&& (isLeftMostPlusMinus(tail.args[0]) || isLeftMostParenthesesExpression(tail.args[0]))) {
+		println("Filtering");
+		filter; 
+	}
+	
+	fail;
 }
 
 //Validate statements starting with +
@@ -644,61 +637,61 @@ Source source(SourceElement head, LAYOUTLIST l, Source tail) {
 // }
 // TODO: make sure this doesn't filter. Currently it DOES.
 BlockStatements blockStatements(BlockStatement head, LAYOUTLIST l, BlockStatements tail) {
-  //println("I was called");
-  if (head is newLine && size(tail.args) > 0) {
-    // candidate for invalid parse tree
-    if (isLeftMostPlusMinus(tail.args[0])) {
-      //println("and filtered");
-      filter;
-    }
-  }
-  fail;
+	//println("I was called");
+	if (head is newLine && size(tail.args) > 0) {
+		// candidate for invalid parse tree
+		if (isLeftMostPlusMinus(tail.args[0])) {
+			//println("and filtered");
+			filter;
+		}
+	}
+	fail;
 }
 
 bool isLeftMostPlusMinus(Tree t) {
-  Tree lefty = getLeftMost(#Expression, t);
-  return (Expression)`+ <Expression _>` := lefty 
-    || (Expression)`- <Expression _>` := lefty;
+	Tree lefty = getLeftMost(#Expression, t);
+	return (Expression)`+ <Expression _>` := lefty 
+		|| (Expression)`- <Expression _>` := lefty;
 }
 
 bool isLeftMostParenthesesExpression(Tree t) {
-  Tree lefty = getLeftMost(#Expression, t);
-  return /(Expression)`( <Expression n1> )` := lefty;
+	Tree lefty = getLeftMost(#Expression, t);
+	return /(Expression)`( <Expression n1> )` := lefty;
 }
 
 tuple[int,int] getBeginPosition(Tree t) = (t@\loc).begin ? <-1,1>;
 
-public Tree getLeftMost(type[&T] tp, Tree t) {
-  currentMin = t@\loc.end;
-  result = t;
-  visit (t) {
-    case &T child : {
-      pos1 = getBeginPosition(child);
-      if (pos1 != <-1,-1>, pos1 < currentMin) {
-        result = child;
-        currentMin = pos1;
-      }
-    }
-  }
-  return result;
+Tree getLeftMost(type[&T] tp, Tree t) {
+	currentMin = t@\loc.end;
+	result = t;
+	visit (t) {
+		case &T child : {
+			pos1 = getBeginPosition(child);
+			if (pos1 != <-1,-1>, pos1 < currentMin) {
+				result = child;
+				currentMin = pos1;
+			}
+		}
+	}
+	return result;
 }
 
 /*
 private bool containsInvalidBlockStatement(Tree t) {
-  if (/blockStatements(head, tail) := t) {
-    // still kinda wrong, isPlus/isMinus search too deep!
-    return tail.args != []
-      && unparse(tail) != ""
-      && (isPlusExpression(tail.args[0]) || isMinusExpression(tail.args[0]));
-  }
-  return false;
+	if (/blockStatements(head, tail) := t) {
+		// still kinda wrong, isPlus/isMinus search too deep!
+		return tail.args != []
+			&& unparse(tail) != ""
+			&& (isPlusExpression(tail.args[0]) || isMinusExpression(tail.args[0]));
+	}
+	return false;
 }
 
 public Tree amb(set[Tree] alternatives) {
-  result = { a | a <- alternatives, !containsInvalidBlockStatement(a)};
-  if ({Tree r} := result)
-    return r;
-  fail amb;
+	result = { a | a <- alternatives, !containsInvalidBlockStatement(a)};
+	if ({Tree r} := result)
+		return r;
+	fail amb;
 }
 */
 //Parsing
@@ -707,12 +700,13 @@ public Source parse(str txt) = parse(#start[Source], txt).top;
 public void parseAndView(loc file) = parseAndView(parse(file));
 public void parseAndView(str txt) = parseAndView(parse(txt));
 public void parseAndView(Tree tree) = render(space(visParsetree(tree),std(gap(8,30)),std(resizable(true))));
+public list[Tree] parseAll(list[value] sources) = [parse(source) | source <- sources];
 
 //UTILITY FUNCTIONS
 private bool isReturnWithExpression(element) = /(Statement)`return <Expression e>` := element;
 private bool isThrowWithExpression(element) = /(Statement)`throw <Expression e>` := element;
 private bool isVariableDeclaration(element) = /(Statement)`var <VariableDeclaration v>` := element;
-  
+	
 private bool isExpression(element) = /(Statement)`<Expression e>` := element;
 private bool isExpressionSemi(element) = /(Statement)`<Expression e>;` := element;
 private bool isExpressionNL(element) = /(Statement)`<Expression e> <OneOrMoreNewLines n>` := element;
