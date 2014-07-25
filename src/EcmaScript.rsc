@@ -9,6 +9,7 @@ import String;
 import List;
 import Map;
 import Set;
+import ValueIO;
 
 /*
  * This grammar supports EcmaScript 5 at the moment which means that the following (non-exhaustive list)
@@ -63,10 +64,10 @@ syntax Statement
     
   | empty: ";" NoNL () !>> [}]
   | emptyBlockEnd: ";" NoNL () !>> [\n] >> [}]
-  | expressionSemi: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams!functionExpression!objectDefinition NoNL ";"
-  | expressionLoose: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams!functionExpression!objectDefinition NoNL () !>> [\n] NoNL () $
-  | expressionBlockEnd: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams!functionExpression!objectDefinition NoNL () !>> [\n] >> [}] >> ZeroOrMoreNewLines
-  | expressionNL: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams!functionExpression!objectDefinition NoNL OneOrMoreNewLines !>> [\n]
+  | expressionSemi: Expression!function!functionAnonymous!objectDefinition NoNL ";"
+  | expressionLoose: Expression!function!functionAnonymous!objectDefinition NoNL () !>> [\n] NoNL () $
+  | expressionBlockEnd: Expression!function!functionAnonymous!objectDefinition NoNL () !>> [\n] >> [}] >> ZeroOrMoreNewLines
+  | expressionNL: Expression!function!functionAnonymous!objectDefinition NoNL OneOrMoreNewLines !>> [\n]
 
   | ifThen: "if" "(" Expression condition ")" Statement!block !>> "else"
   | ifThenBlock: "if" "(" Expression condition ")" Block !>> "else"
@@ -246,12 +247,11 @@ syntax Expression
   | emptyArray: "[" "]"
   | objectDefinitionCommaSuffix:"{" {PropertyAssignment ","}+ "," "}"
   | objectDefinition:"{" {PropertyAssignment ","}* "}"
-  | funcExpr: FunctionExpression
+  > function: "function" Id id "(" {Id ","}* parameters ")" Block block // Is that so? cant we just have expressions as params...
+  | functionAnonymous: "function" "(" {Id ","}* parameters ")" Block block // must be preceded by a var decl or so (cant be loose) // TODO fix!
   | property: Expression "." Id //Can be on LHS of variableAssignment
-  | functionCallParams: Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
-  | functionCallNoParams: () Expression!funcExpr!functionExpressionCallParams!functionExpressionCallNoParams "(" ")" //Can be on LHS of variableAssignment
-  | functionExpressionCallParams: () () FunctionExpression "(" { Expression!comma ","}+ ")" //Can be on LHS of variableAssignment
-  | functionExpressionCallNoParams: () () () FunctionExpression "(" ")" //Can be on LHS of variableAssignment
+  > functionParams: Expression "(" { Expression!comma ","}+ call ")" //Can be on LHS of variableAssignment
+  | functionNoParams: Expression "(" oneShotOpen ")" oneShotClose //Can be on LHS of variableAssignment
   | member: Expression "[" Expression "]" //Can be on LHS of variableAssignment
   | this: "this"
   | id: Id //Can be on LHS of variableAssignment
@@ -330,12 +330,7 @@ syntax Expression
   > right ternary: Expression "?" Expression ":" Expression
   // left comma: Expression "," Expression
   ;
-  
-syntax FunctionExpression
- = function: "function" Id id "(" {Id ","}* parameters ")" Block block // Is that so? cant we just have expressions as params...
- | functionAnonymous: "function" "(" {Id ","}* parameters ")" Block block // must be preceded by a var decl or so (cant be loose) // TODO fix!
- ;
- 
+
 syntax PropertyName
  = Id
  | String
@@ -548,67 +543,37 @@ lexical IdPart
   = [a-zA-Z$_0-9]
   ;
 
-
+//From the ecmascript 5 specification, section 7.6.1.1
 keyword Reserved =
-    "break" |
-    "case" |
-    "catch" |
-    "continue" |
-    "debugger" |
-    "default" |
-    "delete" |
-    "do" |
-    "else" |
-    "finally" |
-    "for" |
-    "function" |
-    "if" |
-    "instanceof" |
-    "in" |
-    "new" |
-    "return" |
-    "switch" |
-    "this" |
-    "throw" |
-    "try" |
-    "typeof" |
-    "var" |
-    "void" |
-    "while" |
-    "with"
-    "abstract" |
-    "boolean" |
-    "byte" |
-    "char" |
-    "class" |
-    "const" |
-    "double" |
-    "enum" |
-    "export" |
-    "extends" |
-    "final" |
-    "float" |
-    "goto" |
-    "implements" |
-    "import" |
-    "interface" |
-    "int" |
-    "long" |
-    "native" |
-    "package" |
-    "private" |
-    "protected" |
-    "public" |
-    "short" |
-    "static" |
-    "super" |
-    "synchronized" |
-    "throws" |
-    "transient" |
-    "volatile" |
-    "null" |
-    "true" |
-    "false"
+	"break" |
+	"case" |
+	"catch" |
+	"continue" |
+	"debugger" |
+	"default" |
+	"delete" |
+	"do" |
+	"else" |
+	"false" |
+	"finally" |
+	"for" |
+	"function" |
+	"if" |
+	"in" |
+	"instanceof" |
+	"new" |
+	"null" |
+	"return" |
+	"switch" |
+	"this" |
+	"throw" |
+	"try" |
+	"true" |
+	"typeof" |
+	"var" |
+	"void" |
+	"while" |
+	"with"
   ;
 
 Source source(SourceElement head, LAYOUTLIST l, Source tail) {	
@@ -619,7 +584,7 @@ Source source(SourceElement head, LAYOUTLIST l, Source tail) {
 			&& unparse(tail) != ""
 			&& isLeftMostPlusMinus(tail.args[0])
 			&& findFirst(unparse(l), "\n") != -1) {
-			println("Filtering");
+			println("Filtering a");
 		filter;
 	}
 	
@@ -627,7 +592,7 @@ Source source(SourceElement head, LAYOUTLIST l, Source tail) {
 		&& (isExpression(head) || isExpressionNL(head))
 		&& unparse(tail) != ""
 		&& (isLeftMostPlusMinus(tail.args[0]) || isLeftMostParenthesesExpression(tail.args[0]))) {
-		println("Filtering");
+		println("Filtering b at head <head@\loc>");
 		filter; 
 	}
 	
@@ -702,11 +667,49 @@ public Tree amb(set[Tree] alternatives) {
 }
 */
 //Parsing
-public Source parse(loc file) = parse(#start[Source], file).top;
-public Source parse(str txt) = parse(#start[Source], txt).top;
+//public Source parse(loc file) = parse(#start[Source], file).top;
+//public Source parse(str txt) = parse(#start[Source], txt).top;
+
+private bool removeAmbiguities = false;
+private bool failOnAmbiguities = false;
+public Source parse(loc file) = removeAmbNodes(parse(#Source, file));
+public Source parse(str txt) = removeAmbNodes(parse(#Source, txt));
+private Source removeAmbNodes(Source source) {
+	if (!removeAmbiguities) return source; 
+	return top-down visit (source) {
+		case ambiguity:amb(xs): {
+			if(failOnAmbiguities) {
+				parseAndView(ambiguity);
+				throw "Ambiguity occured.";
+			}
+			ambList = sort(toList(xs));
+			println("Amb node detected, sorting the amb set and picking the first, due to remove ambiguities flag...");
+			insert ambList[0];
+		}
+	};
+}
+
 public void parseAndView(loc file) = parseAndView(parse(file));
 public void parseAndView(str txt) = parseAndView(parse(txt));
 public void parseAndView(Tree tree) = render(space(visParsetree(tree),std(gap(8,30)),std(resizable(true))));
+public list[Tree] parseAll(list[value] sources) = [parse(source) | source <- sources];
+
+public Source parseAndStore(loc file, loc storeLocation) {
+	Source src = parse(file);
+	storeSourceTree(storeLocation, src);
+	return src;
+}
+
+public Source parseAndStore(str txt, loc storeLocation) {
+	Source src = parse(txt);
+	storeSourceTree(storeLocation, src);
+	return src;
+}
+
+public void storeParseTree(loc location, Tree tree) = writeBinaryValueFile(location, tree);
+public void storeSourceTree(loc location, Source source) = storeParseTree(location, source); 
+public Tree readParseTree(loc location) = readBinaryValueFile(#Tree, location);
+public Source readSourceTree(loc location) =  readBinaryValueFile(#Source, location);
 
 //UTILITY FUNCTIONS
 private bool isReturnWithExpression(element) = /(Statement)`return <Expression e>` := element;
