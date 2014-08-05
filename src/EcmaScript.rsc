@@ -30,9 +30,9 @@ syntax SourceElement
   ;
 
 syntax ZeroOrMoreSourceElements
-	= SourceElement NoNL ZeroOrMoreSourceElements
-	|
-	;
+  = SourceElement NoNL ZeroOrMoreSourceElements
+  |
+  ;
 
 syntax FunctionDeclaration 
   = "function" Id name "(" {Id ","}* parameters ")" Block implementation
@@ -42,7 +42,7 @@ syntax FunctionDeclaration
 // TODO add EOF
 
 lexical NoPrecedingEnters =
-	[\n] !<< [\ \t]*;
+  [\n] !<< [\ \t]*;
 
 syntax Statement 
   = block:Block NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
@@ -150,7 +150,7 @@ syntax BlockStatement
   ;
 
 syntax LastBlockStatement
-	// statements that do not end with a semicolon and are not followed by new lines, but are followed by } (end of block)
+  // statements that do not end with a semicolon and are not followed by new lines, but are followed by } (end of block)
   = last: Statement!variableSemi!expressionSemi!returnNoExp!throwNoExp!continueLabel!continueNoLabel!breakLabel!breakNoLabel!empty!returnExp!throwExp!expressionNL!block!ifThen!ifThenElse!ifThenBlock!ifThenElseBlock!doWhile!whileDo!tryBlock!switchCase!doWhile!forDo!forDoDeclarations!forIn!forInDeclaration NoNL () !>> [\n] >> [}]
   ;
   
@@ -160,12 +160,12 @@ syntax LastBlockStatement
 // parseAndView("appelkoek:{ break appelkoek;\n2;;;1\n+2;\n\n\n\n }"); each extra \n adds ambiguity
 
 lexical OneOrMoreNewLines =
-	[\n] NoNL () NoNL ZeroOrMoreNewLines NoNL () !>> [\n];
+  [\n] NoNL () NoNL ZeroOrMoreNewLines NoNL () !>> [\n];
 
 lexical ZeroOrMoreNewLines =
-	| [\n] NoNL ZeroOrMoreNewLines
-	|
-	;
+  | [\n] NoNL ZeroOrMoreNewLines
+  |
+  ;
 
 syntax ExpressionNoIn // inlining this doesn't work.
   = Expression!inn
@@ -309,7 +309,7 @@ syntax Expression
   > left conjunction: Expression "&&" Expression
   > left disjunction: Expression "||" Expression
   > right (
-	variableAssignment:Expression "=" !>> ([=][=]?) Expression!variableAssignmentLoose >> ";"
+  variableAssignment:Expression "=" !>> ([=][=]?) Expression!variableAssignmentLoose >> ";"
     | variableAssignmentNoSemi:Expression "=" !>> ([=][=]?) Expression!variableAssignmentBlockEnd!variableAssignment >> [\n]
     | variableAssignmentBlockEnd:Expression "=" !>> ([=][=]?) Expression!variableAssignment NoNL () >> [}]
     | variableAssignmentLoose:Expression "=" !>> ([=][=]?) Expression!variableAssignment!variableAssignmentBlockEnd!variableAssignmentMulti !>> [\n] !>> "}" !>> ";"
@@ -546,58 +546,58 @@ lexical IdPart
   ;
 
 keyword Reserved =
-	"break" |
-	"case" |
-	"catch" |
-	"continue" |
-	"debugger" |
-	"default" |
-	"delete" |
-	"do" |
-	"else" |
-	"false" |
-	"finally" |
-	"for" |
-	"function" |
-	"if" |
-	"in" |
-	"instanceof" |
-	"new" |
-	"null" |
-	"return" |
-	"switch" |
-	"this" |
-	"throw" |
-	"try" |
-	"true" |
-	"typeof" |
-	"var" |
-	"void" |
-	"while" |
-	"with"
+  "break" |
+  "case" |
+  "catch" |
+  "continue" |
+  "debugger" |
+  "default" |
+  "delete" |
+  "do" |
+  "else" |
+  "false" |
+  "finally" |
+  "for" |
+  "function" |
+  "if" |
+  "in" |
+  "instanceof" |
+  "new" |
+  "null" |
+  "return" |
+  "switch" |
+  "this" |
+  "throw" |
+  "try" |
+  "true" |
+  "typeof" |
+  "var" |
+  "void" |
+  "while" |
+  "with"
   ;
   
-Source source(SourceElement head, LAYOUTLIST l, Source tail) {	
-	// Prioritizes add and subtract expressions in multiline returns over positive and negative numbers 	
-	//TODO: left-most here too?
-	if (tail.args != [] 
-			&& (isReturnWithExpression(head) || isThrowWithExpression(head) || isVariableDeclaration(head))
-			&& unparse(tail) != ""
-			&& isLeftMostPlusMinus(tail.args[0])
-			&& findFirst(unparse(l), "\n") != -1) {
-			println("Filtering");
-		filter;
-	}
-	
-	if (tail.args != [] 
-		&& (isExpression(head) || isExpressionNL(head))
-		&& unparse(tail) != ""
-		&& (isLeftMostPlusMinus(tail.args[0]) || isLeftMostParenthesesExpression(tail.args[0]))) {
-		println("Filtering");
-		filter; 
-	}
-	
-	fail;
+Source source(SourceElement head, LAYOUTLIST l, Source tail) {  
+  // Prioritizes add and subtract expressions in multiline returns over positive and negative numbers   
+  //TODO: left-most here too?
+  if (tail.args != [] 
+      && (isReturnWithExpression(head) || isThrowWithExpression(head) || isVariableDeclaration(head))
+      && unparse(tail) != ""
+      && isLeftMostPlusMinus(tail.args[0])
+      && findFirst(unparse(l), "\n") != -1) {
+      println("Filtering");
+    filter;
+  }
+  
+  if (tail.args != [] 
+    && (isExpression(head) || isExpressionNL(head))
+    && unparse(tail) != ""
+    && (isLeftMostPlusMinus(tail.args[0]) || isLeftMostParenthesesExpression(tail.args[0]))) {
+    println("Filtering");
+    filter; 
+  }
+  
+  fail;
 }
 
 //Validate statements starting with +
@@ -610,76 +610,76 @@ Source source(SourceElement head, LAYOUTLIST l, Source tail) {
 // }
 // TODO: make sure this doesn't filter. Currently it DOES.
 BlockStatements blockStatements(BlockStatement head, LAYOUTLIST l, BlockStatements tail) {
-	//println("I was called");
-	if (head is newLine && size(tail.args) > 0) {
-		// candidate for invalid parse tree
-		if (isLeftMostPlusMinus(tail.args[0])) {
-			//println("and filtered");
-			filter;
-		}
-	}
-	fail;
+  //println("I was called");
+  if (head is newLine && size(tail.args) > 0) {
+    // candidate for invalid parse tree
+    if (isLeftMostPlusMinus(tail.args[0])) {
+      //println("and filtered");
+      filter;
+    }
+  }
+  fail;
 }
 
 bool isLeftMostPlusMinus(Tree t) {
-	Tree lefty = getLeftMost(#Expression, t);
-	return (Expression)`+ <Expression _>` := lefty 
-		|| (Expression)`- <Expression _>` := lefty;
+  Tree lefty = getLeftMost(#Expression, t);
+  return (Expression)`+ <Expression _>` := lefty 
+    || (Expression)`- <Expression _>` := lefty;
 }
 
 bool isLeftMostParenthesesExpression(Tree t) {
-	Tree lefty = getLeftMost(#Expression, t);
-	return /(Expression)`( <Expression n1> )` := lefty;
+  Tree lefty = getLeftMost(#Expression, t);
+  return /(Expression)`( <Expression n1> )` := lefty;
 }
 
 tuple[int,int] getBeginPosition(Tree t) = (t@\loc).begin ? <-1,1>;
 
 Tree getLeftMost(type[&T] tp, Tree t) {
-	currentMin = t@\loc.end;
-	result = t;
-	visit (t) {
-		case &T child : {
-			pos1 = getBeginPosition(child);
-			if (pos1 != <-1,-1>, pos1 < currentMin) {
-				result = child;
-				currentMin = pos1;
-			}
-		}
-	}
-	return result;
+  currentMin = t@\loc.end;
+  result = t;
+  visit (t) {
+    case &T child : {
+      pos1 = getBeginPosition(child);
+      if (pos1 != <-1,-1>, pos1 < currentMin) {
+        result = child;
+        currentMin = pos1;
+      }
+    }
+  }
+  return result;
 }
 
 /*
 private bool containsInvalidBlockStatement(Tree t) {
-	if (/blockStatements(head, tail) := t) {
-		// still kinda wrong, isPlus/isMinus search too deep!
-		return tail.args != []
-			&& unparse(tail) != ""
-			&& (isPlusExpression(tail.args[0]) || isMinusExpression(tail.args[0]));
-	}
-	return false;
+  if (/blockStatements(head, tail) := t) {
+    // still kinda wrong, isPlus/isMinus search too deep!
+    return tail.args != []
+      && unparse(tail) != ""
+      && (isPlusExpression(tail.args[0]) || isMinusExpression(tail.args[0]));
+  }
+  return false;
 }
 
 public Tree amb(set[Tree] alternatives) {
-	result = { a | a <- alternatives, !containsInvalidBlockStatement(a)};
-	if ({Tree r} := result)
-		return r;
-	fail amb;
+  result = { a | a <- alternatives, !containsInvalidBlockStatement(a)};
+  if ({Tree r} := result)
+    return r;
+  fail amb;
 }
 */
 //Parsing
 
 private bool removeAmbiguities = false;
 public Source parseAndStore(loc file, loc storeLocation) {
-	Source src = parse(file);
-	storeSourceTree(storeLocation, src);
-	return src;
+  Source src = parse(file);
+  storeSourceTree(storeLocation, src);
+  return src;
 }
 
 public Source parseAndStore(str txt, loc storeLocation) {
-	Source src = parse(txt);
-	storeSourceTree(storeLocation, src);
-	return src;
+  Source src = parse(txt);
+  storeSourceTree(storeLocation, src);
+  return src;
 }
 
 public void storeParseTree(loc location, Tree tree) = writeBinaryValueFile(location, tree);
@@ -690,14 +690,14 @@ public Source readSourceTree(loc location) =  readBinaryValueFile(#Source, locat
 public Source parse(loc file) = removeAmbNodes(parse(#start[Source], file).top);
 public Source parse(str txt) = removeAmbNodes(parse(#start[Source], txt).top);
 private Source removeAmbNodes(Source source) {
-	if (!removeAmbiguities) return source; 
-	return top-down visit (source) {
-		case amb(xs): {
-			ambList = sort(toList(xs));
-			println("Amb node detected, sorting the amb set and picking the first, due to remove ambiguities flag...");
-			insert ambList[0];
-		}
-	};
+  if (!removeAmbiguities) return source; 
+  return top-down visit (source) {
+    case amb(xs): {
+      ambList = sort(toList(xs));
+      println("Amb node detected, sorting the amb set and picking the first, due to remove ambiguities flag...");
+      insert ambList[0];
+    }
+  };
 }
 public void parseAndView(loc file) = parseAndView(parse(file));
 public void parseAndView(str txt) = parseAndView(parse(txt));
@@ -707,7 +707,7 @@ public void parseAndView(Tree tree) = render(space(visParsetree(tree),std(gap(8,
 private bool isReturnWithExpression(element) = /(Statement)`return <Expression e>` := element;
 private bool isThrowWithExpression(element) = /(Statement)`throw <Expression e>` := element;
 private bool isVariableDeclaration(element) = /(Statement)`var <VariableDeclaration v>` := element;
-	
+  
 private bool isExpression(element) = /(Statement)`<Expression e>` := element;
 private bool isExpressionSemi(element) = /(Statement)`<Expression e>;` := element;
 private bool isExpressionNL(element) = /(Statement)`<Expression e> <OneOrMoreNewLines n>` := element;
