@@ -9,6 +9,7 @@ import String;
 import List;
 import Map;
 import Set;
+import ValueIO;
 
 /*
  * This grammar supports EcmaScript 5 at the moment which means that the following (non-exhaustive list)
@@ -34,9 +35,10 @@ syntax ZeroOrMoreSourceElements
 	;
 
 syntax FunctionDeclaration 
-  = "function" Id name "(" {Id ","}* parameters ")" Block implementation NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
+  = "function" Id name "(" {Id ","}* parameters ")" Block implementation
   ;
   
+  //  NoNL ZeroOrMoreNewLines NoNL () !>> [\n]
 // TODO add EOF
 
 lexical NoPrecedingEnters =
@@ -77,7 +79,8 @@ syntax Statement
   | doWhileLoose: "do" Statement "while" "(" Expression condition ")" !>> ";"
 
   | whileDo: "while" "(" Expression condition ")" Statement //TODO: WHY DOESNT THE ERROR OCCUR HERE?
-  | forDo: "for" "(" {VariableDeclarationNoIn ","}* ";" {Expression ","}* conditions ";" {Expression ","}* loopOperations ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
+  // variabledeclarationnoin->variableassignmentmulti
+  | forDo: "for" "(" {VariableAssignment ","}* ";" {Expression ","}* conditions ";" {Expression ","}* loopOperations ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
   | forDoDeclarations: "for" "(" "var" {VariableDeclarationNoIn ","}+ ";" {Expression ","}* conditions ";" {Expression ","}* loopOperations ")" Statement  //TODO: WHY DOESNT THE ERROR OCCUR HERE?
   | forIn: "for" "(" Expression expressionLeft "in" Expression expressionRight ")" Statement // left-hand side expr "in" ???
   | forInDeclaration: "for" "(" "var" Id "in" Expression expressionRight ")" Statement
@@ -542,69 +545,38 @@ lexical IdPart
   = [a-zA-Z$_0-9]
   ;
 
-
 keyword Reserved =
-    "break" |
-    "case" |
-    "catch" |
-    "continue" |
-    "debugger" |
-    "default" |
-    "delete" |
-    "do" |
-    "else" |
-    "finally" |
-    "for" |
-    "function" |
-    "if" |
-    "instanceof" |
-    "in" |
-    "new" |
-    "return" |
-    "switch" |
-    "this" |
-    "throw" |
-    "try" |
-    "typeof" |
-    "var" |
-    "void" |
-    "while" |
-    "with"
-    "abstract" |
-    "boolean" |
-    "byte" |
-    "char" |
-    "class" |
-    "const" |
-    "double" |
-    "enum" |
-    "export" |
-    "extends" |
-    "final" |
-    "float" |
-    "goto" |
-    "implements" |
-    "import" |
-    "interface" |
-    "int" |
-    "long" |
-    "native" |
-    "package" |
-    "private" |
-    "protected" |
-    "public" |
-    "short" |
-    "static" |
-    "super" |
-    "synchronized" |
-    "throws" |
-    "transient" |
-    "volatile" |
-    "null" |
-    "true" |
-    "false"
+	"break" |
+	"case" |
+	"catch" |
+	"continue" |
+	"debugger" |
+	"default" |
+	"delete" |
+	"do" |
+	"else" |
+	"false" |
+	"finally" |
+	"for" |
+	"function" |
+	"if" |
+	"in" |
+	"instanceof" |
+	"new" |
+	"null" |
+	"return" |
+	"switch" |
+	"this" |
+	"throw" |
+	"try" |
+	"true" |
+	"typeof" |
+	"var" |
+	"void" |
+	"while" |
+	"with"
   ;
-
+  
 Source source(SourceElement head, LAYOUTLIST l, Source tail) {	
 	// Prioritizes add and subtract expressions in multiline returns over positive and negative numbers 	
 	//TODO: left-most here too?
@@ -696,8 +668,37 @@ public Tree amb(set[Tree] alternatives) {
 }
 */
 //Parsing
-public Source parse(loc file) = parse(#start[Source], file).top;
-public Source parse(str txt) = parse(#start[Source], txt).top;
+
+private bool removeAmbiguities = false;
+public Source parseAndStore(loc file, loc storeLocation) {
+	Source src = parse(file);
+	storeSourceTree(storeLocation, src);
+	return src;
+}
+
+public Source parseAndStore(str txt, loc storeLocation) {
+	Source src = parse(txt);
+	storeSourceTree(storeLocation, src);
+	return src;
+}
+
+public void storeParseTree(loc location, Tree tree) = writeBinaryValueFile(location, tree);
+public void storeSourceTree(loc location, Source source) = storeParseTree(location, source); 
+public Tree readParseTree(loc location) = readBinaryValueFile(#Tree, location);
+public Source readSourceTree(loc location) =  readBinaryValueFile(#Source, location);
+
+public Source parse(loc file) = removeAmbNodes(parse(#start[Source], file).top);
+public Source parse(str txt) = removeAmbNodes(parse(#start[Source], txt).top);
+private Source removeAmbNodes(Source source) {
+	if (!removeAmbiguities) return source; 
+	return top-down visit (source) {
+		case amb(xs): {
+			ambList = sort(toList(xs));
+			println("Amb node detected, sorting the amb set and picking the first, due to remove ambiguities flag...");
+			insert ambList[0];
+		}
+	};
+}
 public void parseAndView(loc file) = parseAndView(parse(file));
 public void parseAndView(str txt) = parseAndView(parse(txt));
 public void parseAndView(Tree tree) = render(space(visParsetree(tree),std(gap(8,30)),std(resizable(true))));
