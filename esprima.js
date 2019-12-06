@@ -405,6 +405,15 @@
                 } else {
                     break;
                 }
+            } else if (ch === '#') {
+                ch = source[index + 1];
+                if (ch === '!') {
+                    // treat this as line comment, even though its a shebang for scripts, we want to ignore it
+                    index += 2;
+                    lineComment = true;
+                } else {
+                    break;
+                }
             } else if (isWhiteSpace(ch)) {
                 ++index;
             } else if (isLineTerminator(ch)) {
@@ -3664,7 +3673,13 @@
                 program.errors = extra.errors;
             }
         } catch (e) {
-            throw e;
+            console.log('Failed to parse ' + options.filename + ' Exception was: ' + e);
+            //throw e;
+            program = {
+                type: Syntax.Program,
+                body: []
+            };
+            return program;
         } finally {
             unpatch();
             extra = {};

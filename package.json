@@ -1,0 +1,21 @@
+{
+  "name": "acg",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://snyk.io/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/snyk-labs/javascript-call-graph"
+  },
+  "scripts": {
+    "start": "node main.js"
+  },
+  "engines": {
+    "node": "6.14.1"
+  },
+  "dependencies": {
+    "amdefine": "0.1.0",
+    "argparse": "0.1.15",
+    "sloc": "0.0.4"
+  }
+}

@@ -9,6 +9,9 @@
  *     Max Schaefer - initial API and implementation
  *******************************************************************************/
 
+const fs = require('fs');
+const path = require('path');
+
 var bindings = require('./bindings'),
     astutil = require('./astutil'),
     pessimistic = require('./pessimistic'),
@@ -17,6 +20,27 @@ var bindings = require('./bindings'),
     callbackCounter = require('./callbackCounter'),
     requireJsGraph = require('./requireJsGraph');
     ArgumentParser = require('argparse').ArgumentParser;
+
+
+const findJsFilesInDir = function(dir, filelist) {
+    if (dir.endsWith('test') || dir.endsWith('tests') || dir.endsWith('bin') || dir.endsWith('demo')) {
+        return filelist;
+    }
+    const files = fs.readdirSync(dir);
+    filelist = filelist || [];
+    files.forEach(function(file) {
+        if (fs.statSync(path.join(dir, file)).isDirectory()) {
+            filelist = findJsFilesInDir(path.join(dir, file), filelist);
+        }
+        else {
+            const filePath = path.join(dir, file);
+            if (filePath.toLowerCase().endsWith('.js')) {
+                filelist.push(filePath);
+            }
+        }
+    });
+    return filelist;
+};
 
 var argParser = new ArgumentParser({
     addHelp: true,
@@ -62,7 +86,7 @@ argParser.addArgument(
 
 var r = argParser.parseKnownArgs();
 var args = r[0],
-    files = r[1];
+    filesOrModules = r[1];
 
 args.strategy = args.strategy || 'ONESHOT';
 if (!args.strategy.match(/^(NONE|ONESHOT|DEMAND|FULL)$/)) {
@@ -72,6 +96,17 @@ if (!args.strategy.match(/^(NONE|ONESHOT|DEMAND|FULL)$/)) {
 if (args.strategy === 'FULL') {
     console.warn('strategy FULL not implemented yet; using DEMAND instead');
     args.strategy = 'DEMAND';
+}
+
+const files = [];
+for (const fileOrModule of filesOrModules){
+    if (fs.lstatSync(fileOrModule).isDirectory()) {
+        const jsFiles = findJsFilesInDir(fileOrModule);
+        files.push(...jsFiles);
+    }
+    else {
+        files.push(fileOrModule);
+    }
 }
 
 
