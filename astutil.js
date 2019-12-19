@@ -93,7 +93,7 @@ define(function (require, exports) {
 
     /* Pretty-print position. */
     function ppPos(nd) {
-        return nd.attr.enclosingFile + "@" + nd.loc.start.line + ":" + nd.range[0] + "-" + nd.range[1];
+        return nd.attr.enclosingFile + "@" + nd.loc.start.line + ":" + nd.loc.start.column;
     }
 
     /* Build an AST from a collection of source files. */

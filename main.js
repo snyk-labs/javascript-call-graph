@@ -54,9 +54,9 @@ argParser.addArgument(
 );
 
 argParser.addArgument(
-    [ '--cg' ],
-    { nargs: 0,
-        help: 'print call graph' }
+    [ '--cgPath' ],
+    { nargs: '?',
+        help: 'if set, will write the call graph to a file' }
 );
 
 argParser.addArgument(
@@ -138,18 +138,100 @@ if (args.reqJs)
         console.log(edge.toString());
     });
 
-if (args.cg) {
-    function pp(v) {
-        if (v.type === 'CalleeVertex')
-            return astutil.ppPos(v.call);
-        if (v.type === 'FuncVertex')
-            return astutil.ppPos(v.func);
-        if (v.type === 'NativeVertex')
-            return v.name;
-        throw new Error("strange vertex: " + v);
+if (args.cgPath) {
+    function constructNodeFromCallVertex(callVertex) {
+        if (!callVertex.call.attr.hasOwnProperty('enclosingFunction')) {
+            return {
+                'function_name': 'toplevel',
+                "file_name": callVertex.call.attr.enclosingFile,
+                'function_position': callVertex.call.loc.start.line + ":" + callVertex.call.loc.start.column,
+                'id':  callVertex.attr.node_id
+            }
+        }
+
+        return undefined;
     }
 
+    function constructNodeFromFuncVertex(funcVertex) {
+        if (funcVertex.type === 'NativeVertex') {
+            return {
+                'function_name': funcVertex.name,
+                "file_name": 'native',
+                'function_position': '0:0',
+                'id':  funcVertex.attr.node_id
+            }
+        }
+
+        if (funcVertex.type === 'FuncVertex') {
+            return {
+                'function_name': funcVertex.func.attr.enclosingFile,
+                "file_name": funcVertex.func.id.name,
+                'function_position': funcVertex.func.id.loc.start.line + ":" + funcVertex.func.id.loc.start.column,
+                'id':  funcVertex.attr.node_id
+            }
+        }
+
+        return undefined;
+    }
+
+    function addGraphNode(newNode, graphNodesById) {
+        if (newNode !== undefined && !(newNode.id in graphNodesById)) {
+            graphNodesById[newNode.id] = newNode;
+        }
+    }
+
+    function calleeName(callVertex) {
+        const callee = callVertex.call.callee;
+        if ('object' in callee && 'property' in callee) {
+            return callee.object.name + "." + callee.property.name;
+        }
+
+        return callee.name;
+    }
+
+    function addGraphEdge(callVertex, funcVertex, graphEdges) {
+        let sourceId = callVertex.attr.node_id;
+        if (callVertex.call.attr.hasOwnProperty('enclosingFunction')) {
+            // if the call is from a function, we use that function id as source id instead
+            sourceId = callVertex.call.attr.enclosingFunction.attr.func_vertex.attr.node_id;
+        }
+        let targetId = funcVertex.attr.node_id;
+        graphEdges.push({
+            'source': sourceId,
+            'target': targetId,
+            'call_file_path': callVertex.call.attr.enclosingFile,
+            'callee_name': calleeName(callVertex),
+            'call_position': callVertex.call.loc.start.line + ':' + callVertex.call.loc.start.column
+        });
+    }
+
+    const graphNodesById = {};
     cg.edges.iter(function (call, fn) {
-        console.log(pp(call) + " -> " + pp(fn));
+        const callVertexNode = constructNodeFromCallVertex(call);
+        addGraphNode(callVertexNode, graphNodesById);
+
+        const funcVertexNode = constructNodeFromFuncVertex(fn);
+        addGraphNode(funcVertexNode, graphNodesById);
     });
+
+    const graphEdges = [];
+    cg.edges.iter(function (callVertex, funcVertex) {
+        addGraphEdge(callVertex, funcVertex, graphEdges);
+    });
+
+
+    const graphNodes = Object.keys(graphNodesById)
+        .map(function(nodeId) { return graphNodesById[nodeId] });
+
+
+    const callGraph = {
+        'directed': true,
+        'nodes': graphNodes,
+        'links': graphEdges
+    };
+
+    var callGraphJson = JSON.stringify(callGraph);
+
+    console.log('Wrote the call graph to ' + args.cgPath);
+    fs.writeFileSync(args.cgPath, callGraphJson , 'utf-8');
 }
