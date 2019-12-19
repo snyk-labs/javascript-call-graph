@@ -3674,12 +3674,12 @@
             }
         } catch (e) {
             console.log('Failed to parse ' + options.filename + ' Exception was: ' + e);
-            //throw e;
-            program = {
-                type: Syntax.Program,
-                body: []
-            };
-            return program;
+            throw e;
+            // program = {
+            //     type: Syntax.Program,
+            //     body: []
+            // };
+            // return program;
         } finally {
             unpatch();
             extra = {};
