@@ -93,7 +93,7 @@ define(function (require, exports) {
 
     /* Pretty-print position. */
     function ppPos(nd) {
-        return basename(nd.attr.enclosingFile) + "@" + nd.loc.start.line + ":" + nd.range[0] + "-" + nd.range[1];
+        return nd.attr.enclosingFile + "@" + nd.loc.start.line + ":" + nd.loc.start.column;
     }
 
     /* Build an AST from a collection of source files. */
@@ -109,7 +109,7 @@ define(function (require, exports) {
             attr: {}
         };
         sources.forEach(function (source) {
-            var prog = esprima.parse(source.program, { loc: true, range: true });
+            var prog = esprima.parse(source.program, { loc: true, range: true, filename: source.filename });
             prog.attr = { filename: source.filename, sloc : sloc(source.program, "javascript").sloc};
             ast.programs.push(prog);
         });
