@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const _ = require('lodash');
 
 var bindings = require('./bindings'),
     astutil = require('./astutil'),
@@ -140,11 +141,15 @@ if (args.reqJs)
 
 if (args.cgPath) {
     function constructNodeFromCallVertex(callVertex) {
-        if (!callVertex.call.attr.hasOwnProperty('enclosingFunction')) {
+        if (!callVertex.call.attr.enclosingFunction) {
+
+            const fileName = _.get(callVertex, 'call.attr.enclosingFile', 'null');
+            const linePosition = _.get(callVertex, 'call.loc.start.line', 'null');
+            const colPosition = _.get(callVertex, 'call.loc.start.column', 'null');
             return {
                 'function_name': 'toplevel',
-                "file_name": callVertex.call.attr.enclosingFile,
-                'function_position': callVertex.call.loc.start.line + ":" + callVertex.call.loc.start.column,
+                "file_name": fileName,
+                'function_position': `${linePosition}:${colPosition}`,
                 'id':  callVertex.attr.node_id
             }
         }
@@ -163,10 +168,17 @@ if (args.cgPath) {
         }
 
         if (funcVertex.type === 'FuncVertex') {
+
+            const functionName = _.get(funcVertex, 'func.id.name', 'null');
+            const fileName = _.get(funcVertex, 'func.attr.enclosingFile', 'null');
+
+            const linePosition = _.get(funcVertex, 'func.id.loc.start.line', 'null');
+            const colPosition = _.get(funcVertex, 'func.id.loc.start.column', 'null');
+
             return {
-                'function_name': funcVertex.func.attr.enclosingFile,
-                "file_name": funcVertex.func.id.name,
-                'function_position': funcVertex.func.id.loc.start.line + ":" + funcVertex.func.id.loc.start.column,
+                'function_name': functionName,
+                "file_name": fileName,
+                'function_position': `${linePosition}:${colPosition}`,
                 'id':  funcVertex.attr.node_id
             }
         }
@@ -182,7 +194,7 @@ if (args.cgPath) {
 
     function calleeName(callVertex) {
         const callee = callVertex.call.callee;
-        if ('object' in callee && 'property' in callee) {
+        if (callee.object && callee.property) {
             return callee.object.name + "." + callee.property.name;
         }
 
@@ -191,17 +203,22 @@ if (args.cgPath) {
 
     function addGraphEdge(callVertex, funcVertex, graphEdges) {
         let sourceId = callVertex.attr.node_id;
-        if (callVertex.call.attr.hasOwnProperty('enclosingFunction')) {
+        if (callVertex.call.attr.enclosingFunction) {
             // if the call is from a function, we use that function id as source id instead
             sourceId = callVertex.call.attr.enclosingFunction.attr.func_vertex.attr.node_id;
         }
         let targetId = funcVertex.attr.node_id;
+
+        const callFileName = _.get(callVertex, 'call.attr.enclosingFile', 'null');
+        const callLinePos = _.get(callVertex, 'call.loc.start.line', 'null');
+        const callColPos = _.get(callVertex, 'call.loc.start.column', 'null');
+
         graphEdges.push({
             'source': sourceId,
             'target': targetId,
-            'call_file_path': callVertex.call.attr.enclosingFile,
+            'call_file_path': callFileName,
             'callee_name': calleeName(callVertex),
-            'call_position': callVertex.call.loc.start.line + ':' + callVertex.call.loc.start.column
+            'call_position': `${callLinePos}:${callColPos}`
         });
     }
 
