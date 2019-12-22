@@ -142,7 +142,6 @@ if (args.reqJs)
 if (args.cgPath) {
     function constructNodeFromCallVertex(callVertex) {
         if (!callVertex.call.attr.enclosingFunction) {
-
             const fileName = _.get(callVertex, 'call.attr.enclosingFile', 'null');
             const linePosition = _.get(callVertex, 'call.loc.start.line', 'null');
             const colPosition = _.get(callVertex, 'call.loc.start.column', 'null');
@@ -154,7 +153,17 @@ if (args.cgPath) {
             }
         }
 
-        return undefined;
+        else {
+            const funcVertex = callVertex.call.attr.enclosingFunction.attr.func_vertex;
+            const linePosition = _.get(funcVertex, 'func.loc.start.line', 'null');
+            const colPosition = _.get(funcVertex, 'func.loc.start.column', 'null');
+            return {
+                'function_name': _.get(funcVertex, 'func.id.name', 'null'),
+                "file_name": _.get(funcVertex, 'func.attr.enclosingFile', 'null'),
+                'function_position': `${linePosition}:${colPosition}`,
+                'id':  funcVertex.attr.node_id
+            }
+        }
     }
 
     function constructNodeFromFuncVertex(funcVertex) {
@@ -207,6 +216,7 @@ if (args.cgPath) {
             // if the call is from a function, we use that function id as source id instead
             sourceId = callVertex.call.attr.enclosingFunction.attr.func_vertex.attr.node_id;
         }
+
         let targetId = funcVertex.attr.node_id;
 
         const callFileName = _.get(callVertex, 'call.attr.enclosingFile', 'null');
