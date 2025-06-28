@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "amdefine": "0.1.0",
-    "argparse": "0.1.15",
+    "argparse": "0.1.16",
     "sloc": "0.0.4"
   }
 }
