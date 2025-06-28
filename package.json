@@ -14,7 +14,7 @@
     "node": "6.14.1"
   },
   "dependencies": {
-    "amdefine": "0.1.0",
+    "amdefine": "0.1.1",
     "argparse": "0.1.15",
     "sloc": "0.0.4"
   }
